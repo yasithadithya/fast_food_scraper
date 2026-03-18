@@ -29,13 +29,6 @@ export const CHAINS: Record<ChainSlug, ChainInfo> = {
     brandColor: "#F15A22",
     dealsPageUrl: "https://popeyes.com.lk",
   },
-  "taco-bell": {
-    slug: "taco-bell",
-    name: "Taco Bell",
-    baseUrl: "https://tacobell.lk",
-    brandColor: "#702082",
-    dealsPageUrl: "https://tacobell.lk",
-  },
 };
 
 export const CHAIN_SLUGS = Object.keys(CHAINS) as ChainSlug[];

@@ -1,56 +1,155 @@
 import type { ChainScraper, Deal } from "@/lib/types";
 import { buildDeal } from "./base";
 
+interface PizzaHutTokenResponse {
+  access_token?: string;
+}
+
+interface PizzaHutOutlet {
+  Code?: string;
+  OutletCode?: string | null;
+  IsActive?: boolean;
+}
+
+interface PizzaHutMenuItem {
+  WebName?: string;
+  Description?: string;
+  DescriptionShort?: string;
+  Price?: string | number | null;
+  FullImageUrl?: string | null;
+  ImageURL?: string | null;
+  CategoryUrl?: string;
+}
+
+const API_BASE = "https://phapis.pizzahut.lk";
+const TOKEN_SCOPE = process.env.PIZZA_HUT_TOKEN_SCOPE ?? "/vQFtb6VBYg";
+const TOKEN_USERNAME =
+  process.env.PIZZA_HUT_TOKEN_USERNAME ?? "JustWebUser";
+const TOKEN_PASSWORD =
+  process.env.PIZZA_HUT_TOKEN_PASSWORD ?? "nxNCtHIDOJVbGBa";
+const DEFAULT_OUTLET_CODE = "AKU";
+
+async function getAccessToken(): Promise<string | null> {
+  try {
+    const body = new URLSearchParams({
+      username: TOKEN_USERNAME,
+      password: TOKEN_PASSWORD,
+      grant_type: "password",
+      scope: TOKEN_SCOPE,
+    });
+
+    const res = await fetch(`${API_BASE}/gettoken`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: body.toString(),
+      signal: AbortSignal.timeout(10_000),
+    });
+
+    if (!res.ok) return null;
+    const json = (await res.json()) as PizzaHutTokenResponse;
+    return json.access_token ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function postApi<T>(
+  path: string,
+  token: string,
+  body: unknown
+): Promise<T | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api${path}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(10_000),
+    });
+
+    if (!res.ok) return null;
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
+function normalizePrice(price: PizzaHutMenuItem["Price"]): string | null {
+  if (price === null || price === undefined) return null;
+
+  const numeric = typeof price === "number" ? price : Number(price);
+  if (!Number.isFinite(numeric) || numeric <= 0) return null;
+
+  return `Rs. ${numeric.toLocaleString("en-LK", {
+    maximumFractionDigits: 0,
+  })}`;
+}
+
+function normalizeImageUrl(item: PizzaHutMenuItem): string | null {
+  if (item.FullImageUrl && item.FullImageUrl.startsWith("http")) {
+    return item.FullImageUrl;
+  }
+
+  if (item.ImageURL && item.ImageURL.startsWith("/")) {
+    return `${API_BASE}${item.ImageURL}`;
+  }
+
+  return null;
+}
+
 export const pizzaHutScraper: ChainScraper = {
   chain: "pizza-hut",
 
   async scrape(): Promise<Deal[]> {
-    // Pizza Hut SL is a fully client-rendered SPA.
-    // Attempt to find and call their underlying API.
-    const apiUrls = [
-      "https://pizzahut.lk/api/promotions",
-      "https://pizzahut.lk/api/offers",
-      "https://pizzahut.lk/api/v1/promotions",
-      "https://pizzahut.lk/api/deals",
-    ];
+    const token = await getAccessToken();
+    if (!token) return [];
 
-    for (const url of apiUrls) {
-      try {
-        const res = await fetch(url, {
-          headers: {
-            Accept: "application/json",
-            "User-Agent":
-              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-          },
-          signal: AbortSignal.timeout(10_000),
+    const outlets =
+      (await postApi<PizzaHutOutlet[]>("/references/outlets", token, {})) ?? [];
+
+    const outletCode =
+      outlets.find((o) => o.IsActive && o.OutletCode)?.OutletCode ??
+      outlets.find((o) => o.IsActive && o.Code)?.Code ??
+      outlets.find((o) => o.OutletCode)?.OutletCode ??
+      outlets.find((o) => o.Code)?.Code ??
+      DEFAULT_OUTLET_CODE;
+
+    const items =
+      (await postApi<PizzaHutMenuItem[]>(
+        `/menu/items?webCategory=promo&menuCategory=meal-deal&outletCode=${encodeURIComponent(
+          outletCode
+        )}`,
+        token,
+        ""
+      )) ?? [];
+
+    const seen = new Set<string>();
+
+    const deals = items
+      .map((item) => {
+        const title = item.WebName?.trim();
+        if (!title || seen.has(title)) return null;
+        seen.add(title);
+
+        const description =
+          item.Description?.trim() ||
+          item.DescriptionShort?.trim() ||
+          "Pizza Hut meal deal from the promo menu.";
+
+        return buildDeal("pizza-hut", {
+          title,
+          description,
+          price: normalizePrice(item.Price),
+          imageUrl: normalizeImageUrl(item),
+          sourceUrl: "https://www.pizzahut.lk/menu/promo/meal-deal",
         });
+      })
+      .filter((deal): deal is Deal => deal !== null);
 
-        if (!res.ok) continue;
-
-        const data = await res.json();
-        const items: Array<Record<string, string>> =
-          data.promotions ?? data.offers ?? data.deals ?? data.data ?? [];
-
-        if (!Array.isArray(items) || items.length === 0) continue;
-
-        const deals: Deal[] = items.map(
-          (item: Record<string, string>) =>
-            buildDeal("pizza-hut", {
-              title: item.title ?? item.name ?? "Pizza Hut Deal",
-              description: item.description ?? "",
-              price: item.price ?? null,
-              imageUrl: item.image ?? item.imageUrl ?? null,
-              sourceUrl: "https://pizzahut.lk",
-            })
-        );
-
-        if (deals.length > 0) return deals;
-      } catch {
-        // Try next URL
-      }
-    }
-
-    // SPA — cheerio won't help. Return empty, registry will use fallback.
-    return [];
+    return deals;
   },
 };

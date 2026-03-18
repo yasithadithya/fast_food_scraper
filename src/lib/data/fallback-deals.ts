@@ -111,26 +111,6 @@ const FALLBACK_DEALS: Record<ChainSlug, Deal[]> = {
       "Rs. 1,490"
     ),
   ],
-  "taco-bell": [
-    fallbackDeal(
-      "taco-bell",
-      "Taco Tuesday",
-      "Special taco deals every Tuesday — mix and match your favourites",
-      null
-    ),
-    fallbackDeal(
-      "taco-bell",
-      "Value Combo Box",
-      "Burrito + taco + nachos + drink in one great-value box",
-      "Rs. 1,490"
-    ),
-    fallbackDeal(
-      "taco-bell",
-      "Crunchwrap Supreme Deal",
-      "Crunchwrap Supreme with a side of nachos at a special price",
-      "Rs. 1,290"
-    ),
-  ],
 };
 
 export function getFallbackDeals(chain: ChainSlug): Deal[] {

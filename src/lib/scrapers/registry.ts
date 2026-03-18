@@ -3,7 +3,6 @@ import { kfcScraper } from "./kfc";
 import { pizzaHutScraper } from "./pizza-hut";
 import { burgerKingScraper } from "./burger-king";
 import { popeyesScraper } from "./popeyes";
-import { tacoBellScraper } from "./taco-bell";
 import { getFallbackDeals } from "@/lib/data/fallback-deals";
 
 const scrapers: ChainScraper[] = [
@@ -11,7 +10,6 @@ const scrapers: ChainScraper[] = [
   pizzaHutScraper,
   burgerKingScraper,
   popeyesScraper,
-  tacoBellScraper,
 ];
 
 export async function scrapeAllDeals(): Promise<DealsApiResponse> {

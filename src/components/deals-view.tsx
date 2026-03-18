@@ -13,12 +13,12 @@ import { LoadingSkeleton } from "./loading-skeleton";
 import { ErrorFallback } from "./error-fallback";
 
 export function DealsView() {
-  const { data, loading, error } = useDeals();
+  const { data, loading, syncing, error, syncDeals } = useDeals();
   const geo = useGeolocation();
   const [activeChain, setActiveChain] = useState<ChainSlug | "all">("all");
 
   const enrichedDeals = useMemo(() => {
-    if (!data?.deals) return [];
+    if (!data) return [];
     const filtered =
       activeChain === "all"
         ? data.deals
@@ -35,13 +35,19 @@ export function DealsView() {
       if (b.distanceMeters !== null) return 1;
       return 0;
     });
-  }, [data?.deals, activeChain, geo.location]);
+  }, [data, activeChain, geo.location]);
 
-  if (loading) return <LoadingSkeleton />;
-  if (error) return <ErrorFallback message={error} />;
+  if (loading && !data) return <LoadingSkeleton />;
+  if (error && !data) return <ErrorFallback message={error} />;
 
   return (
     <div className="space-y-6 pt-6">
+      {error && data && (
+        <div className="rounded-xl bg-amber-50 p-3 text-center text-xs text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
+          Sync failed: {error}. Showing the most recently loaded deals.
+        </div>
+      )}
+
       {!geo.requested && (
         <LocationPrompt
           onRequest={geo.requestLocation}
@@ -67,11 +73,21 @@ export function DealsView() {
           {enrichedDeals.length} deal{enrichedDeals.length !== 1 ? "s" : ""}{" "}
           found
         </p>
-        {data?.scrapedAt && (
-          <p className="text-xs text-zinc-400 dark:text-zinc-500">
-            Updated {new Date(data.scrapedAt).toLocaleTimeString()}
-          </p>
-        )}
+        <div className="flex items-center gap-3">
+          {data?.scrapedAt && (
+            <p className="text-xs text-zinc-400 dark:text-zinc-500">
+              Updated {new Date(data.scrapedAt).toLocaleTimeString()}
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={syncDeals}
+            disabled={syncing}
+            className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+          >
+            {syncing ? "Syncing..." : "Sync deals"}
+          </button>
+        </div>
       </div>
 
       <DealGrid deals={enrichedDeals} />

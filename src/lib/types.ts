@@ -2,8 +2,7 @@ export type ChainSlug =
   | "kfc"
   | "pizza-hut"
   | "burger-king"
-  | "popeyes"
-  | "taco-bell";
+  | "popeyes";
 
 export interface ChainInfo {
   slug: ChainSlug;

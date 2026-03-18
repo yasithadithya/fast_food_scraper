@@ -10,7 +10,7 @@ const geistSans = Geist({
 export const metadata: Metadata = {
   title: "Fast Food Deals Sri Lanka",
   description:
-    "Today's best fast food deals, offers, and discounts from KFC, Pizza Hut, Burger King, Popeyes, and Taco Bell in Sri Lanka. Find the nearest branch to you.",
+    "Today's best fast food deals, offers, and discounts from KFC, Pizza Hut, Burger King, and Popeyes in Sri Lanka. Find the nearest branch to you.",
 };
 
 export const viewport: Viewport = {

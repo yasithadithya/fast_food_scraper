@@ -56,11 +56,6 @@ export const STORE_LOCATIONS: BranchLocation[] = [
   { chain: "popeyes", name: "Popeyes Dehiwala", lat: 6.8560, lng: 79.8648, address: "Galle Road, Dehiwala", city: "Dehiwala" },
   { chain: "popeyes", name: "Popeyes Wattala", lat: 6.9893, lng: 79.8914, address: "Negombo Road, Wattala", city: "Wattala" },
   { chain: "popeyes", name: "Popeyes Maharagama", lat: 6.8468, lng: 79.9268, address: "High Level Road, Maharagama", city: "Maharagama" },
-
-  // ── Taco Bell ──
-  { chain: "taco-bell", name: "Taco Bell Colombo 4", lat: 6.8948, lng: 79.8558, address: "Duplication Road, Colombo 4", city: "Colombo" },
-  { chain: "taco-bell", name: "Taco Bell Colombo 3", lat: 6.9112, lng: 79.8545, address: "Galle Road, Colombo 3", city: "Colombo" },
-  { chain: "taco-bell", name: "Taco Bell Nugegoda", lat: 6.8722, lng: 79.8888, address: "High Level Road, Nugegoda", city: "Nugegoda" },
 ];
 
 export function getBranchesByChain(chain: string): BranchLocation[] {
