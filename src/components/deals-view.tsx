@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { useDeals } from "@/hooks/use-deals";
 import { useGeolocation } from "@/hooks/use-geolocation";
+import { useNearbyBranches } from "@/hooks/use-nearby-branches";
 import { enrichDealsWithDistance } from "@/lib/distance";
 import { CHAIN_SLUGS } from "@/lib/data/chains";
 import type { ChainSlug } from "@/lib/types";
@@ -15,6 +16,7 @@ import { ErrorFallback } from "./error-fallback";
 export function DealsView() {
   const { data, loading, syncing, error, syncDeals } = useDeals();
   const geo = useGeolocation();
+  const nearbyBranches = useNearbyBranches(geo.location);
   const [activeChain, setActiveChain] = useState<ChainSlug | "all">("all");
 
   const enrichedDeals = useMemo(() => {
@@ -24,7 +26,16 @@ export function DealsView() {
         ? data.deals
         : data.deals.filter((d) => d.chain === activeChain);
 
-    const withDistance = enrichDealsWithDistance(filtered, geo.location);
+    const branchPool =
+      geo.location && nearbyBranches.loaded
+        ? nearbyBranches.branches
+        : undefined;
+
+    const withDistance = enrichDealsWithDistance(
+      filtered,
+      geo.location,
+      branchPool
+    );
 
     // Sort: deals with location info first (by distance), then others
     return withDistance.sort((a, b) => {
@@ -35,7 +46,7 @@ export function DealsView() {
       if (b.distanceMeters !== null) return 1;
       return 0;
     });
-  }, [data, activeChain, geo.location]);
+  }, [data, activeChain, geo.location, nearbyBranches.branches, nearbyBranches.loaded]);
 
   if (loading && !data) return <LoadingSkeleton />;
   if (error && !data) return <ErrorFallback message={error} />;
@@ -61,6 +72,23 @@ export function DealsView() {
           {geo.error}. Deals are shown without distance information.
         </div>
       )}
+
+      {geo.location && nearbyBranches.error && (
+        <div className="rounded-xl bg-amber-50 p-3 text-center text-xs text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
+          Could not load nearby branches from Google Maps ({nearbyBranches.error}).
+          Using curated branch locations.
+        </div>
+      )}
+
+      {geo.location &&
+        !nearbyBranches.error &&
+        nearbyBranches.source === "fallback" && (
+          <div className="rounded-xl bg-zinc-100 p-3 text-center text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+            {nearbyBranches.fallbackReason === "missing_api_key"
+              ? "Google Maps API key is not configured. Using curated nearby branches."
+              : "Google Maps did not return nearby branches. Using curated branch locations."}
+          </div>
+        )}
 
       <ChainFilter
         chains={CHAIN_SLUGS}

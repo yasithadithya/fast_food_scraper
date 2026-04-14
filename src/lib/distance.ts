@@ -10,25 +10,26 @@ import { STORE_LOCATIONS } from "@/lib/data/store-locations";
 
 export function findNearestBranch(
   userLocation: UserLocation,
-  chain: ChainSlug
+  chain: ChainSlug,
+  branches: BranchLocation[] = STORE_LOCATIONS
 ): { branch: BranchLocation; distanceMeters: number } | null {
-  const branches = STORE_LOCATIONS.filter((b) => b.chain === chain);
-  if (branches.length === 0) return null;
+  const chainBranches = branches.filter((b) => b.chain === chain);
+  if (chainBranches.length === 0) return null;
 
-  let nearest = branches[0];
+  let nearest = chainBranches[0];
   let minDist = haversineDistance(
     { lat: userLocation.lat, lng: userLocation.lng },
     { lat: nearest.lat, lng: nearest.lng }
   );
 
-  for (let i = 1; i < branches.length; i++) {
+  for (let i = 1; i < chainBranches.length; i++) {
     const dist = haversineDistance(
       { lat: userLocation.lat, lng: userLocation.lng },
-      { lat: branches[i].lat, lng: branches[i].lng }
+      { lat: chainBranches[i].lat, lng: chainBranches[i].lng }
     );
     if (dist < minDist) {
       minDist = dist;
-      nearest = branches[i];
+      nearest = chainBranches[i];
     }
   }
 
@@ -37,13 +38,14 @@ export function findNearestBranch(
 
 export function enrichDealsWithDistance(
   deals: Deal[],
-  userLocation: UserLocation | null
+  userLocation: UserLocation | null,
+  branches: BranchLocation[] = STORE_LOCATIONS
 ): DealWithDistance[] {
   return deals.map((deal) => {
     if (!userLocation) {
       return { ...deal, nearestBranch: null, distanceMeters: null };
     }
-    const result = findNearestBranch(userLocation, deal.chain);
+    const result = findNearestBranch(userLocation, deal.chain, branches);
     return {
       ...deal,
       nearestBranch: result?.branch ?? null,

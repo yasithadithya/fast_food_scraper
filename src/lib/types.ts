@@ -32,6 +32,7 @@ export interface BranchLocation {
   lng: number;
   address: string;
   city: string;
+  placeId?: string;
 }
 
 export interface UserLocation {
