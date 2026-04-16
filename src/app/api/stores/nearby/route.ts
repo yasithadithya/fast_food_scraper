@@ -98,10 +98,14 @@ async function fetchNearbyForChain(
   }
 
   return (data.results ?? [])
-    .map((place) => {
+    .map((place): BranchLocation | null => {
       const placeLat = place.geometry?.location?.lat;
       const placeLng = place.geometry?.location?.lng;
-      if (!Number.isFinite(placeLat) || !Number.isFinite(placeLng)) {
+      if (typeof placeLat !== "number" || !Number.isFinite(placeLat)) {
+        return null;
+      }
+
+      if (typeof placeLng !== "number" || !Number.isFinite(placeLng)) {
         return null;
       }
 
@@ -116,7 +120,7 @@ async function fetchNearbyForChain(
         placeId: place.place_id,
       } satisfies BranchLocation;
     })
-    .filter((branch): branch is BranchLocation => Boolean(branch));
+    .filter((branch): branch is BranchLocation => branch !== null);
 }
 
 function dedupeBranches(branches: BranchLocation[]): BranchLocation[] {
