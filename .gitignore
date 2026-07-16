@@ -24,6 +24,11 @@
 .DS_Store
 *.pem
 
+# scratch / debug output
+tmp.json
+tmp_result.json
+*.tmp
+
 # debug
 npm-debug.log*
 yarn-debug.log*

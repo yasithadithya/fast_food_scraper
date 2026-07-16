@@ -2,7 +2,12 @@ import * as cheerio from "cheerio";
 import type { Deal, ChainSlug } from "@/lib/types";
 import crypto from "crypto";
 
-export async function fetchHtml(url: string): Promise<string> {
+const MAX_ATTEMPTS = 3;
+
+/** Non-retryable client-error status: retrying won't change the outcome. */
+class HttpClientError extends Error {}
+
+async function fetchHtmlOnce(url: string): Promise<string> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10_000);
   try {
@@ -14,11 +19,36 @@ export async function fetchHtml(url: string): Promise<string> {
         Accept: "text/html,application/xhtml+xml",
       },
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status} from ${url}`);
+    if (!res.ok) {
+      const message = `HTTP ${res.status} from ${url}`;
+      // 4xx is a client error — don't retry, it won't fix itself.
+      if (res.status >= 400 && res.status < 500) {
+        throw new HttpClientError(message);
+      }
+      throw new Error(message);
+    }
     return await res.text();
   } finally {
     clearTimeout(timeout);
   }
+}
+
+export async function fetchHtml(url: string): Promise<string> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      return await fetchHtmlOnce(url);
+    } catch (error) {
+      lastError = error;
+      // Client errors (4xx) and the final attempt are not retried.
+      if (error instanceof HttpClientError || attempt === MAX_ATTEMPTS) {
+        break;
+      }
+      // Exponential backoff: ~400ms, ~800ms.
+      await new Promise((resolve) => setTimeout(resolve, 400 * 2 ** (attempt - 1)));
+    }
+  }
+  throw lastError;
 }
 
 export function parseHtml(html: string) {

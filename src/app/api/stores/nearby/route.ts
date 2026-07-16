@@ -98,10 +98,15 @@ async function fetchNearbyForChain(
   }
 
   return (data.results ?? [])
-    .map((place) => {
+    .map((place): BranchLocation | null => {
       const placeLat = place.geometry?.location?.lat;
       const placeLng = place.geometry?.location?.lng;
-      if (!Number.isFinite(placeLat) || !Number.isFinite(placeLng)) {
+      if (
+        typeof placeLat !== "number" ||
+        !Number.isFinite(placeLat) ||
+        typeof placeLng !== "number" ||
+        !Number.isFinite(placeLng)
+      ) {
         return null;
       }
 
@@ -114,9 +119,9 @@ async function fetchNearbyForChain(
         address,
         city: getCity(address),
         placeId: place.place_id,
-      } satisfies BranchLocation;
+      };
     })
-    .filter((branch): branch is BranchLocation => Boolean(branch));
+    .filter((branch): branch is BranchLocation => branch !== null);
 }
 
 function dedupeBranches(branches: BranchLocation[]): BranchLocation[] {
@@ -143,6 +148,13 @@ export async function GET(request: Request) {
     if (lat === null || lng === null) {
       return NextResponse.json(
         { error: "lat and lng query params are required" },
+        { status: 400 }
+      );
+    }
+
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      return NextResponse.json(
+        { error: "lat must be in [-90, 90] and lng in [-180, 180]" },
         { status: 400 }
       );
     }

@@ -12,11 +12,10 @@ export function NearestBranchBadge({ branch, distanceMeters }: Props) {
   if (!branch || distanceMeters === null) return null;
 
   return (
-    <div className="text-right text-xs text-zinc-500 dark:text-zinc-400">
-      <p className="font-medium">{branch.name}</p>
-      <p className="flex items-center justify-end gap-1">
+    <div className="flex max-w-[55%] flex-col items-end text-right">
+      <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-semibold text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
         <svg
-          className="h-3 w-3"
+          className="h-3 w-3 shrink-0"
           fill="none"
           viewBox="0 0 24 24"
           strokeWidth={2}
@@ -33,8 +32,11 @@ export function NearestBranchBadge({ branch, distanceMeters }: Props) {
             d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"
           />
         </svg>
-        {formatDistance(distanceMeters)} away
-      </p>
+        {formatDistance(distanceMeters)}
+      </span>
+      <span className="mt-1 truncate text-[11px] text-zinc-400 dark:text-zinc-500">
+        {branch.name}
+      </span>
     </div>
   );
 }

@@ -47,10 +47,17 @@ async function getAccessToken(): Promise<string | null> {
       signal: AbortSignal.timeout(10_000),
     });
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.error(`Pizza Hut gettoken failed: HTTP ${res.status}`);
+      return null;
+    }
     const json = (await res.json()) as PizzaHutTokenResponse;
     return json.access_token ?? null;
-  } catch {
+  } catch (error) {
+    console.error(
+      "Pizza Hut gettoken error:",
+      error instanceof Error ? error.message : error
+    );
     return null;
   }
 }
@@ -71,9 +78,16 @@ async function postApi<T>(
       signal: AbortSignal.timeout(10_000),
     });
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.error(`Pizza Hut ${path} failed: HTTP ${res.status}`);
+      return null;
+    }
     return (await res.json()) as T;
-  } catch {
+  } catch (error) {
+    console.error(
+      `Pizza Hut ${path} error:`,
+      error instanceof Error ? error.message : error
+    );
     return null;
   }
 }
@@ -89,13 +103,19 @@ function normalizePrice(price: PizzaHutMenuItem["Price"]): string | null {
   })}`;
 }
 
+/** Collapse accidental duplicate slashes in the path (the API returns URLs
+ *  like "https://host//images/..."), leaving the "https://" scheme intact. */
+function cleanUrl(url: string): string {
+  return url.replace(/([^:])\/{2,}/g, "$1/");
+}
+
 function normalizeImageUrl(item: PizzaHutMenuItem): string | null {
   if (item.FullImageUrl && item.FullImageUrl.startsWith("http")) {
-    return item.FullImageUrl;
+    return cleanUrl(item.FullImageUrl);
   }
 
   if (item.ImageURL && item.ImageURL.startsWith("/")) {
-    return `${API_BASE}${item.ImageURL}`;
+    return cleanUrl(`${API_BASE}${item.ImageURL}`);
   }
 
   return null;
@@ -106,7 +126,9 @@ export const pizzaHutScraper: ChainScraper = {
 
   async scrape(): Promise<Deal[]> {
     const token = await getAccessToken();
-    if (!token) return [];
+    if (!token) {
+      throw new Error("Pizza Hut: failed to obtain access token");
+    }
 
     const outlets =
       (await postApi<PizzaHutOutlet[]>("/references/outlets", token, {})) ?? [];
@@ -124,7 +146,7 @@ export const pizzaHutScraper: ChainScraper = {
           outletCode
         )}`,
         token,
-        ""
+        {}
       )) ?? [];
 
     const seen = new Set<string>();
